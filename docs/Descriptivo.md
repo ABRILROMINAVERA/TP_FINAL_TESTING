@@ -3,8 +3,8 @@
 
 **Institución:** Universidad de Belgrano  
 **Materia:** Testeo y Prueba de Software  
-**Alumno:** Matias GP  
-**Año:** 2025  
+**Alumno:** Abril Vera  
+**Año:** 2026  
 
 ---
 
