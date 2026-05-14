@@ -1,3 +1,4 @@
+ HEAD
 # TP_Final_Testing
 Trabajo Practico Final Testing
 
@@ -59,3 +60,6 @@ py -m pytest --cov=src --cov-report=term-missing
 ```
 dist/BibliotecaBarrial.exe
 ```
+=======
+# TP_FINAL_TESTING
+ 108784f607536e28b1b125d9d902344365fd2a64
