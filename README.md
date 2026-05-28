@@ -3,7 +3,7 @@
 
 **Institución:** Universidad de Belgrano  
 **Materia:** Testeo y Prueba de Software  
-**Alumno:** Abril Vera  
+**Alumno:** Abril Vera 
 **Año:** 2025  
 
 ---
@@ -21,7 +21,11 @@
    - [Secuencia: Registrar Préstamo](#63-secuencia-registrar-préstamo)
    - [Secuencia: Registrar Devolución](#64-secuencia-registrar-devolución)
 7. [Suite de Tests](#7-suite-de-tests)
-8. [Cómo Ejecutar](#8-cómo-ejecutar)
+8. [Ejecución de las Pruebas](#8-ejecución-de-las-pruebas)
+   - [Plan de Ejecución](#81-plan-de-ejecución)
+   - [Resultados](#82-resultados)
+   - [Cobertura de Código](#83-cobertura-de-código)
+9. [Cómo Ejecutar](#9-cómo-ejecutar)
 
 ---
 
@@ -427,7 +431,190 @@ El proyecto cuenta con **146 tests automatizados** organizados en tres niveles:
 
 ---
 
-## 8. Cómo Ejecutar
+## 8. Ejecución de las Pruebas
+
+### 8.1 Plan de Ejecución
+
+#### Entorno
+
+| Ítem | Detalle |
+|------|---------|
+| Sistema Operativo | Windows 11 Home |
+| Lenguaje | Python 3.13.2 |
+| Framework de testing | pytest 9.0.3 |
+| Plugins utilizados | pytest-cov 7.1.0 |
+| Fecha de ejecución | 26/05/2026 |
+
+#### Orden de ejecución
+
+Las suites se ejecutan en el siguiente orden, de menor a mayor nivel de integración:
+
+```
+1. test_componentes   → clases y métodos en aislamiento
+2. test_integracion   → interacción entre capas con repositorios reales
+3. test_caja_negra    → requerimientos funcionales RF01–RF12
+4. test_rendimiento   → tiempos de respuesta bajo carga
+5. test_interfaz      → contratos entre capas con mocks
+6. test_camino        → cobertura de caminos independientes (McCabe)
+```
+
+#### Comando de ejecución
+
+```
+py -m pytest tests/test_componentes tests/test_integracion tests/test_caja_negra tests/test_rendimiento tests/test_interfaz tests/test_camino -v
+```
+
+Con reporte de cobertura:
+```
+py -m pytest tests/test_componentes tests/test_integracion tests/test_caja_negra tests/test_rendimiento tests/test_interfaz tests/test_camino --cov=src --cov-report=term-missing
+```
+
+#### Criterios de aceptación
+
+| Criterio | Umbral |
+|----------|--------|
+| Tests aprobados | 100 % (0 fallos permitidos) |
+| Operaciones individuales (RNF07) | < 100 ms |
+| Carga masiva 1 000 registros (RNF07) | < 500 ms |
+| Cobertura lógica de negocio (modelos + repos + servicios) | ≥ 85 % |
+
+---
+
+### 8.2 Resultados
+
+**Ejecución:** 26/05/2026 · Python 3.13.2 · pytest 9.0.3 · Windows 11
+
+#### Resumen por suite
+
+| # | Suite | Archivo | Tests | Aprobados | Fallidos | Tiempo |
+|---|-------|---------|------:|----------:|---------:|-------:|
+| 1 | Componentes | `test_componentes.py` | 72 | 72 | 0 | — |
+| 2 | Integración | `test_integracion.py` | 20 | 20 | 0 | — |
+| 3 | Caja Negra | `test_caja_negra.py` | 41 | 41 | 0 | — |
+| 4 | Rendimiento | `test_rendimiento.py` | 18 | 18 | 0 | — |
+| 5 | Interfaz | `test_interfaz.py` | 24 | 24 | 0 | — |
+| 6 | Camino | `test_camino.py` | 17 | 17 | 0 | — |
+| | **TOTAL** | | **192** | **192** | **0** | **0.49 s** |
+
+> **Resultado: APROBADO** — 192/192 tests pasando, 0 fallos.
+
+#### Detalle por suite
+
+**1. Prueba de Componentes (72 tests)**
+
+Verifica cada clase y método en aislamiento total. Cubre: `Autor`, `Libro`, `Cliente`, `Prestamo`, `AutorRepository`, `LibroRepository`, `ClienteRepository`, `PrestamoRepository`.
+
+| Clase testeada | Tests | Resultado |
+|----------------|------:|-----------|
+| Autor | 11 | ✅ PASS |
+| Libro | 13 | ✅ PASS |
+| Cliente | 9 | ✅ PASS |
+| Prestamo | 12 | ✅ PASS |
+| AutorRepository | 9 | ✅ PASS |
+| LibroRepository | 6 | ✅ PASS |
+| ClienteRepository | 4 | ✅ PASS |
+| PrestamoRepository | 7 | ✅ PASS |
+
+**2. Prueba de Integración (20 tests)**
+
+Verifica el flujo de datos entre capas reales (Servicios → Repositorios → Modelos).
+
+| Flujo testeado | Tests | Resultado |
+|----------------|------:|-----------|
+| Autor ↔ Libro | 6 | ✅ PASS |
+| Cliente ↔ Préstamo | 6 | ✅ PASS |
+| Ciclo completo préstamo/devolución | 7 | ✅ PASS |
+| Préstamo vencido → devolución | 1 | ✅ PASS |
+
+**3. Prueba de Caja Negra (41 tests)**
+
+Verifica cada Requerimiento Funcional desde entradas/salidas, sin conocimiento del código interno.
+
+| RF | Descripción | Tests | Resultado |
+|----|-------------|------:|-----------|
+| RF01 | Registrar autor | 4 | ✅ PASS |
+| RF02 | Registrar libro | 4 | ✅ PASS |
+| RF03 | Dar de baja libro | 3 | ✅ PASS |
+| RF04 | Registrar cliente | 3 | ✅ PASS |
+| RF05 | Dar de baja cliente | 3 | ✅ PASS |
+| RF06 | Registrar préstamo | 3 | ✅ PASS |
+| RF07 | Registrar devolución | 3 | ✅ PASS |
+| RF08 | Préstamos de un cliente | 3 | ✅ PASS |
+| RF09 | Préstamos vencidos | 3 | ✅ PASS |
+| RF10 | Buscar y filtrar | 5 | ✅ PASS |
+| RF11 | Fecha devolución automática | 4 | ✅ PASS |
+| RF12 | Estado libro automático | 3 | ✅ PASS |
+
+**4. Prueba de Rendimiento (18 tests)**
+
+Verifica el cumplimiento de RNF07 (< 100 ms por operación individual, < 500 ms por carga masiva de 1 000 registros).
+
+| Grupo | Descripción | Tests | Resultado |
+|-------|-------------|------:|-----------|
+| Operaciones individuales | agregar/buscar/prestar/devolver | 7 | ✅ PASS |
+| Consultas con 500 registros | libros, clientes disponibles/activos | 4 | ✅ PASS |
+| Carga masiva de 1 000 registros | inserción de autores, libros, clientes, préstamos | 4 | ✅ PASS |
+| Filtros con 1 000 préstamos | activos, vencidos, todos | 3 | ✅ PASS |
+
+> Todas las operaciones responden dentro del umbral definido. La carga de 1 000 registros completó en < 500 ms.
+
+**5. Prueba de Interfaz (24 tests)**
+
+Verifica contratos entre capas usando `unittest.mock.MagicMock`. Comprueba qué métodos se invocan, con qué argumentos y qué tipos se retornan.
+
+| Interfaz testeada | Tests | Resultado |
+|-------------------|------:|-----------|
+| BibliotecaService → AutorRepository | 3 | ✅ PASS |
+| BibliotecaService → LibroRepository | 5 | ✅ PASS |
+| BibliotecaService → ClienteRepository | 3 | ✅ PASS |
+| PrestamoService → repositorios | 9 | ✅ PASS |
+| Tipos de retorno de servicios | 4 | ✅ PASS |
+
+**6. Prueba de Camino — Basis Path Testing (17 tests)**
+
+Verifica cada camino de ejecución independiente (McCabe) de los métodos más complejos.
+
+| Método | V(G) | Caminos | Tests | Resultado |
+|--------|-----:|--------:|------:|-----------|
+| `PrestamoService.prestar_libro()` | 5 | 5 | 5 | ✅ PASS |
+| `PrestamoService.devolver_libro()` | 3 | 3 | 3 | ✅ PASS |
+| `BibliotecaService.dar_de_baja_libro()` | 3 | 3 | 3 | ✅ PASS |
+| `BibliotecaService.dar_de_baja_cliente()` | 3 | 3 | 3 | ✅ PASS |
+| `Prestamo.esta_vencido()` | 3 | 3 | 3 | ✅ PASS |
+| `Prestamo.estado()` | 3 | 3 | 3 | ✅ PASS |
+
+---
+
+### 8.3 Cobertura de Código
+
+Medida con `pytest-cov` sobre el paquete `src/`.
+
+| Módulo | Líneas | Sin cubrir | Cobertura |
+|--------|-------:|-----------:|----------:|
+| `src/exceptions.py` | 24 | 0 | **100 %** |
+| `src/models/autor.py` | 22 | 0 | **100 %** |
+| `src/models/prestamo.py` | 37 | 0 | **100 %** |
+| `src/models/libro.py` | 35 | 1 | **97 %** |
+| `src/models/cliente.py` | 27 | 2 | **93 %** |
+| `src/repositories/autor_repository.py` | 26 | 0 | **100 %** |
+| `src/repositories/prestamo_repository.py` | 26 | 0 | **100 %** |
+| `src/repositories/cliente_repository.py` | 20 | 1 | **95 %** |
+| `src/repositories/libro_repository.py` | 25 | 1 | **96 %** |
+| `src/services/biblioteca_service.py` | 67 | 0 | **100 %** |
+| `src/services/prestamo_service.py` | 46 | 1 | **98 %** |
+| `src/gui/` *(excluida del scope de tests)* | 721 | 721 | 0 % |
+
+**Cobertura de la lógica de negocio** (modelos + repositorios + servicios, excluyendo GUI):
+
+```
+Líneas cubiertas:  330 / 335  →  98.5 %
+```
+
+> Supera ampliamente el umbral del 85 % establecido en RNF05.
+
+---
+
+## 9. Cómo Ejecutar
 
 **Aplicación gráfica:**
 ```
