@@ -3,7 +3,7 @@
 
 **Institución:** Universidad de Belgrano  
 **Materia:** Testeo y Prueba de Software  
-**Alumno:** Abril Vera 
+**Alumno:** Abril Vera  
 **Año:** 2025  
 
 ---
@@ -25,7 +25,12 @@
    - [Plan de Ejecución](#81-plan-de-ejecución)
    - [Resultados](#82-resultados)
    - [Cobertura de Código](#83-cobertura-de-código)
-9. [Cómo Ejecutar](#9-cómo-ejecutar)
+9. [Pruebas End-to-End (E2E)](#10-pruebas-end-to-end-e2e)
+   - [Descripción y Enfoque](#101-descripción-y-enfoque)
+   - [Plan de Ejecución E2E](#102-plan-de-ejecución-e2e)
+   - [Escenarios](#103-escenarios)
+   - [Resultados E2E](#104-resultados)
+10. [Cómo Ejecutar](#9-cómo-ejecutar)
 
 ---
 
@@ -611,6 +616,100 @@ Líneas cubiertas:  330 / 335  →  98.5 %
 ```
 
 > Supera ampliamente el umbral del 85 % establecido en RNF05.
+
+---
+
+## 10. Pruebas End-to-End (E2E)
+
+### 10.1 Descripción y Enfoque
+
+Las pruebas E2E verifican escenarios completos de uso del sistema tal como los ejecutaría un bibliotecario real. A diferencia de las pruebas unitarias o de integración, cada test E2E atraviesa **todas las capas reales** del sistema sin ningún mock:
+
+```
+Escenario de usuario
+       ↓
+  BibliotecaService / PrestamoService   ← punto de entrada
+       ↓
+  AutorRepository / LibroRepository
+  ClienteRepository / PrestamoRepository
+       ↓
+  Autor / Libro / Cliente / Prestamo    ← estado final verificado
+```
+
+> **Nota sobre la GUI:** la automatización de ventanas Tkinter requiere un entorno gráfico activo y herramientas externas frágiles. Por eso el punto de entrada de los tests E2E es la capa de Servicios, que es exactamente lo que los frames de la GUI invocan. El comportamiento observable es idéntico.
+
+---
+
+### 10.2 Plan de Ejecución E2E
+
+#### Entorno
+
+| Ítem | Detalle |
+|------|---------|
+| Sistema Operativo | Windows 11 Home |
+| Lenguaje | Python 3.13.2 |
+| Framework | pytest 9.0.3 |
+| Archivo de tests | `tests/test_e2e/test_e2e.py` |
+| Fecha de ejecución | 02/06/2026 |
+
+#### Comando de ejecución
+
+```
+py -m pytest tests/test_e2e -v
+```
+
+#### Criterios de aceptación E2E
+
+| Criterio | Condición |
+|----------|-----------|
+| Todos los escenarios pasan | 100 % (0 fallos) |
+| Estado del sistema consistente en cada paso | Verificado con asserts intermedios |
+| Errores de negocio manejados correctamente | Excepciones específicas por caso |
+| Sin efectos secundarios entre escenarios | Cada test usa un sistema limpio |
+
+---
+
+### 10.3 Escenarios
+
+| ID | Escenario | Pasos clave |
+|----|-----------|-------------|
+| E2E-01 | Alta completa de entidades y primer préstamo | Registrar autor → libro → cliente → realizar préstamo → verificar estado en todas las capas |
+| E2E-02 | Ciclo completo de préstamo, devolución y re-préstamo | Prestar a cliente 1 → devolver → prestar a cliente 2 → verificar historial |
+| E2E-03 | Intento de préstamo sobre libro ya prestado | Prestar a cliente 1 → cliente 2 intenta el mismo libro → rechazo → estado intacto |
+| E2E-04 | Baja de cliente bloqueada por préstamo activo | Prestar → intentar baja (rechazada) → devolver → dar de baja exitosa |
+| E2E-05 | Detección y resolución de préstamos vencidos | Crear préstamo vencido → verificar listado → devolver → desaparece del listado |
+| E2E-06 | Cliente con múltiples libros prestados simultáneamente | Prestar dos libros → devolver uno → verificar estado → devolver el otro → historial completo |
+| E2E-07 | Integridad ante registros duplicados en toda la cadena | Intentar duplicar autor, libro, cliente y préstamo → rechazos → datos originales intactos |
+| E2E-08 | Baja de libro bloqueada por préstamo activo | Prestar → intentar baja del libro (rechazada) → devolver → dar de baja exitosa |
+| E2E-09 | Sistema vacío responde correctamente | Verificar que todas las consultas retornan vacío sin excepciones |
+
+---
+
+### 10.4 Resultados
+
+**Ejecución:** 02/06/2026 · Python 3.13.2 · pytest 9.0.3 · Windows 11
+
+| ID | Escenario | Tests | Resultado | Tiempo |
+|----|-----------|------:|-----------|-------:|
+| E2E-01 | Alta completa y primer préstamo | 5 | ✅ PASS | — |
+| E2E-02 | Ciclo préstamo, devolución y re-préstamo | 5 | ✅ PASS | — |
+| E2E-03 | Préstamo sobre libro ya prestado | 2 | ✅ PASS | — |
+| E2E-04 | Baja de cliente bloqueada → devolver → dar de baja | 2 | ✅ PASS | — |
+| E2E-05 | Préstamos vencidos | 5 | ✅ PASS | — |
+| E2E-06 | Cliente con múltiples libros | 1 | ✅ PASS | — |
+| E2E-07 | Integridad ante duplicados | 4 | ✅ PASS | — |
+| E2E-08 | Baja de libro bloqueada → devolver → dar de baja | 1 | ✅ PASS | — |
+| E2E-09 | Sistema vacío | 2 | ✅ PASS | — |
+| | **TOTAL** | **27** | **27/27 ✅** | **0.20 s** |
+
+> **Resultado: APROBADO** — 27/27 escenarios E2E pasando, 0 fallos.
+
+#### Observaciones
+
+- Cada test parte de un sistema completamente limpio (fixture `sistema` crea nuevas instancias de todos los repositorios).
+- Los tests con préstamos vencidos usan inserción directa en el repositorio para simular el paso del tiempo sin depender del reloj real.
+- El E2E-06 verifica la consistencia del estado en **cada paso** del flujo, no solo al final, garantizando que no hay estados intermedios corruptos.
+- El E2E-07 verifica que los rechazos no alteran los datos existentes (los originales permanecen intactos tras cada intento fallido).
 
 ---
 
