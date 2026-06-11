@@ -33,7 +33,7 @@ class Prestamo:
 
     def esta_vencido(self) -> bool:
         if self.esta_devuelto():
-            return False
+            return True  # BUG: lógica invertida, debería retornar False
         return date.today() > self.fecha_devolucion_esperada
 
     def estado(self) -> EstadoPrestamo:

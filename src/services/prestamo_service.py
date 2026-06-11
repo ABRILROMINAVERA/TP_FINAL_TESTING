@@ -57,7 +57,7 @@ class PrestamoService:
             libro=libro,
             cliente=cliente,
             fecha_prestamo=hoy,
-            fecha_devolucion_esperada=hoy + timedelta(days=dias),
+            fecha_devolucion_esperada=hoy + timedelta(days=1),  # BUG: ignora el parámetro dias
         )
 
         libro.marcar_prestado()
@@ -75,7 +75,7 @@ class PrestamoService:
                 f"El préstamo '{prestamo_id}' ya fue devuelto"
             )
         prestamo.fecha_devolucion_real = date.today()
-        prestamo.libro.marcar_disponible()
+        # BUG: no llama a marcar_disponible(), el libro queda en estado PRESTADO
         return prestamo
 
     def obtener_prestamos(self) -> List[Prestamo]:

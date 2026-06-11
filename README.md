@@ -3,7 +3,7 @@
 
 **Institución:** Universidad de Belgrano  
 **Materia:** Testeo y Prueba de Software  
-**Alumno:** Abril Vera  
+**Alumno:** Abril Vera 
 **Año:** 2025  
 
 ---
@@ -30,7 +30,8 @@
    - [Plan de Ejecución E2E](#102-plan-de-ejecución-e2e)
    - [Escenarios](#103-escenarios)
    - [Resultados E2E](#104-resultados)
-10. [Cómo Ejecutar](#9-cómo-ejecutar)
+10. [Bugs Introducidos y Tests que los Detectaron](#11-bugs-introducidos-y-tests-que-los-detectaron)
+11. [Cómo Ejecutar](#9-cómo-ejecutar)
 
 ---
 
@@ -710,6 +711,143 @@ py -m pytest tests/test_e2e -v
 - Los tests con préstamos vencidos usan inserción directa en el repositorio para simular el paso del tiempo sin depender del reloj real.
 - El E2E-06 verifica la consistencia del estado en **cada paso** del flujo, no solo al final, garantizando que no hay estados intermedios corruptos.
 - El E2E-07 verifica que los rechazos no alteran los datos existentes (los originales permanecen intactos tras cada intento fallido).
+
+---
+
+## 11. Bugs Introducidos y Tests que los Detectaron
+
+Esta sección documenta 3 defectos deliberadamente introducidos en el código fuente para demostrar la capacidad de detección de la suite de pruebas. Cada bug pertenece a una categoría distinta de error.
+
+> **Estado actual:** los bugs están presentes en el código. Los tests actúan como red de seguridad y reportan los fallos con precisión.
+
+---
+
+### Bug 1 — Error de Parámetro
+
+**Archivo:** `src/services/prestamo_service.py` · línea 60
+
+**Descripción:** al crear un préstamo, el parámetro `dias` recibido es ignorado. El cálculo de la fecha de devolución siempre usa `1` en lugar del valor pasado, haciendo que todos los préstamos venzan al día siguiente sin importar la duración configurada.
+
+**Código con el bug:**
+```python
+# ANTES (correcto):
+fecha_devolucion_esperada=hoy + timedelta(days=dias),
+
+# DESPUÉS (con bug):
+fecha_devolucion_esperada=hoy + timedelta(days=1),  # BUG: ignora el parámetro dias
+```
+
+**Test representativo que falla:**
+```
+FAILED tests/test_caja_negra/test_caja_negra.py::TestCajaNegrRF11FechaDevolucion::test_rf11_fecha_calculada_con_dias_por_defecto
+```
+
+**Mensaje de error:**
+```
+AssertionError: assert datetime.date(2026, 6, 11) == datetime.date(2026, 6, 24)
+```
+
+**Explicación:** el test espera que un préstamo con `dias=14` tenga fecha de devolución `hoy + 14 días`. El bug hace que siempre sea `hoy + 1 día`, produciendo una fecha completamente incorrecta. En producción esto significaría que todos los préstamos vencen al día siguiente de ser registrados.
+
+**Tests adicionales afectados por este bug:**
+- `test_rf11_fecha_calculada_con_dias_personalizados`
+- `test_camino_5_prestamo_exitoso`
+- `test_fecha_devolucion_calculada_correctamente`
+- `test_flujo_completo_alta_y_prestamo`
+
+---
+
+### Bug 2 — Error de Funcionamiento
+
+**Archivo:** `src/services/prestamo_service.py` · línea 78
+
+**Descripción:** al registrar una devolución, se omite la llamada a `libro.marcar_disponible()`. El préstamo queda registrado como devuelto pero el libro permanece en estado `PRESTADO` indefinidamente, impidiendo que sea prestado nuevamente.
+
+**Código con el bug:**
+```python
+# ANTES (correcto):
+prestamo.fecha_devolucion_real = date.today()
+prestamo.libro.marcar_disponible()
+
+# DESPUÉS (con bug):
+prestamo.fecha_devolucion_real = date.today()
+# BUG: no llama a marcar_disponible(), el libro queda en estado PRESTADO
+```
+
+**Test representativo que falla:**
+```
+FAILED tests/test_caja_negra/test_caja_negra.py::TestCajaNegrRF12EstadoLibro::test_rf12_libro_vuelve_a_disponible_al_devolver
+```
+
+**Mensaje de error:**
+```
+AssertionError: assert <EstadoLibro.PRESTADO: 'Prestado'> == <EstadoLibro.DISPONIBLE: 'Disponible'>
+```
+
+**Explicación:** el test verifica que tras una devolución el libro vuelva a estado `DISPONIBLE`. El bug hace que el libro permanezca en `PRESTADO` aunque el préstamo figure como devuelto. En producción esto bloquearía todos los re-préstamos y el listado de disponibles quedaría siempre vacío tras el primer préstamo.
+
+**Tests adicionales afectados por este bug:**
+- `test_ciclo_completo_prestamo_y_devolucion`
+- `test_prestar_libro_recien_devuelto`
+- `test_camino_3_devolucion_exitosa`
+- `test_flujo_completo_baja_cliente`
+- `test_libro_disponible_tras_devolucion`
+- `test_flujo_cliente_con_dos_libros`
+
+---
+
+### Bug 3 — Error de Lógica
+
+**Archivo:** `src/models/prestamo.py` · línea 36
+
+**Descripción:** en el método `esta_vencido()`, la condición de guardia que protege los préstamos devueltos tiene la lógica invertida. Retorna `True` (vencido) cuando el préstamo ya fue devuelto, en lugar de `False`. Esto hace que cualquier devolución aparezca automáticamente en el listado de vencidos.
+
+**Código con el bug:**
+```python
+# ANTES (correcto):
+def esta_vencido(self) -> bool:
+    if self.esta_devuelto():
+        return False
+    return date.today() > self.fecha_devolucion_esperada
+
+# DESPUÉS (con bug):
+def esta_vencido(self) -> bool:
+    if self.esta_devuelto():
+        return True  # BUG: lógica invertida, debería retornar False
+    return date.today() > self.fecha_devolucion_esperada
+```
+
+**Test representativo que falla:**
+```
+FAILED tests/test_componentes/test_componentes.py::TestComponentePrestamo::test_devuelto_nunca_es_vencido
+```
+
+**Mensaje de error:**
+```
+AssertionError: assert True is False
+ +  where True = esta_vencido()
+```
+
+**Explicación:** el test verifica que un préstamo devuelto nunca sea considerado vencido. El bug invierte ese comportamiento: todo préstamo devuelto aparece inmediatamente como vencido. En producción, el listado de vencidos estaría contaminado con devoluciones ya realizadas, haciendo imposible distinguir qué está realmente pendiente.
+
+**Tests adicionales afectados por este bug:**
+- `test_rf09_devuelto_no_aparece_como_vencido`
+- `test_camino_1_devuelto_no_es_vencido`
+- `test_vencido_desaparece_tras_devolucion`
+- `test_prestamo_vencido_desaparece_tras_devolucion`
+
+---
+
+### Resumen de impacto
+
+| Bug | Tipo | Archivo | Tests fallidos | Tests representativo |
+|-----|------|---------|:--------------:|----------------------|
+| Bug 1 | Error de Parámetro | `prestamo_service.py:60` | 5 | `test_rf11_fecha_calculada_con_dias_por_defecto` |
+| Bug 2 | Error de Funcionamiento | `prestamo_service.py:78` | 12 | `test_rf12_libro_vuelve_a_disponible_al_devolver` |
+| Bug 3 | Error de Lógica | `prestamo.py:36` | 5 | `test_devuelto_nunca_es_vencido` |
+| | | **Total** | **21** | |
+
+**Resultado de la suite con los bugs activos:** 198 passed · **21 failed** · 0.71 s
 
 ---
 
